@@ -101,6 +101,36 @@
       font-size: 14px;
       line-height: 1.6;
     }
+    .condition-section {
+      margin-bottom: 12px;
+    }
+    .condition-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 16px;
+      color: #fff;
+    }
+    .condition-badge.good { background: #27ae60; }
+    .condition-badge.ok { background: #f39c12; }
+    .condition-badge.caution { background: #e74c3c; }
+    .activity-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .activity-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .activity-badge.active { background: #27ae60; }
+    .activity-badge.marginal { background: #f39c12; }
+    .activity-badge.inactive { background: #95a5a6; }
   </style>
 </head>
 <body>
@@ -154,6 +184,53 @@
                      '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
       const index = Math.round(deg / 22.5) % 16;
       return dirs[index];
+    }
+
+    function judgeWingfoil(windSpeed, waveHeight) {
+      if (windSpeed >= 15 && windSpeed <= 35 && waveHeight <= 2.0) return 'active';
+      if (windSpeed >= 10 && windSpeed <= 40 && waveHeight <= 2.5) return 'marginal';
+      return 'inactive';
+    }
+
+    function judgeSurf(windSpeed, waveHeight) {
+      if (waveHeight >= 0.5 && waveHeight <= 2.5 && windSpeed <= 15) return 'active';
+      if (waveHeight >= 0.3 && waveHeight <= 3.0 && windSpeed <= 20) return 'marginal';
+      return 'inactive';
+    }
+
+    function judgeSup(windSpeed, waveHeight) {
+      if (windSpeed <= 10 && waveHeight <= 0.5) return 'active';
+      if (windSpeed <= 15 && waveHeight <= 1.0) return 'marginal';
+      return 'inactive';
+    }
+
+    function judgeOverall(windSpeed, windGusts, waveHeight, activities) {
+      if (windGusts > 35 || waveHeight > 3.0) return 'caution';
+      if (activities.some(a => a.level === 'active')) return 'good';
+      return 'ok';
+    }
+
+    const OVERALL_LABELS = { good: 'GOOD', ok: 'OK', caution: 'CAUTION' };
+    const ACTIVITY_LABELS = { active: '適', marginal: '微妙', inactive: '不適' };
+
+    function renderCondition(windSpeed, windGusts, waveHeight) {
+      const activities = [
+        { name: 'ウィングフォイル', level: judgeWingfoil(windSpeed, waveHeight) },
+        { name: 'サーフィン', level: judgeSurf(windSpeed, waveHeight) },
+        { name: 'SUP', level: judgeSup(windSpeed, waveHeight) },
+      ];
+      const overall = judgeOverall(windSpeed, windGusts, waveHeight, activities);
+
+      return `
+        <div class="condition-section">
+          <span class="condition-badge ${overall}">${OVERALL_LABELS[overall]}</span>
+          <div class="activity-list">
+            ${activities.map(a =>
+              `<span class="activity-badge ${a.level}">${a.name}: ${ACTIVITY_LABELS[a.level]}</span>`
+            ).join('')}
+          </div>
+        </div>
+      `;
     }
 
     async function fetchWeatherData() {
@@ -245,6 +322,7 @@
         fetchMarineData()
       ]);
 
+      let conditionHtml = '';
       let html = '';
       const errors = [];
 
@@ -266,7 +344,13 @@
         errors.push('波データ');
       }
 
-      resultEl.innerHTML = html;
+      if (weatherResult.status === 'fulfilled' && marineResult.status === 'fulfilled') {
+        const w = weatherResult.value.current;
+        const m = marineResult.value.current;
+        conditionHtml = renderCondition(w.wind_speed_10m, w.wind_gusts_10m, m.wave_height);
+      }
+
+      resultEl.innerHTML = conditionHtml + html;
 
       if (errors.length === 0) {
         statusEl.textContent = '取得成功';
