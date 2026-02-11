@@ -5,7 +5,7 @@ test.describe('Phase 1: 風データ取得と表示', () => {
   test('ページを開いてデータが表示される', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
-    await expect(page.locator('#result table')).toBeVisible();
+    await expect(page.locator('#weather-table')).toBeVisible();
   });
 
   test('風速（km/h）が表示される', async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('Phase 1: 風データ取得と表示', () => {
 
     // 一時的に「読み込み中...」になった後、再度取得成功になる
     await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
-    await expect(page.locator('#result table')).toBeVisible();
+    await expect(page.locator('#weather-table')).toBeVisible();
   });
 
   test('APIエラー時にエラーメッセージが表示される', async ({ page }) => {
