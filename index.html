@@ -557,13 +557,12 @@
 
     /* --- Wind Map --- */
     let windMap = null;
-    let windMarker = null;
-
-    function windSpeedColor(ms) {
-      if (ms >= 8) return '#ff2d55';
-      if (ms >= 4) return '#30e060';
-      return '#00bfff';
-    }
+    let windMarkers = [];
+    const ARROW_POSITIONS = [
+      [35.3060, 139.5170],
+      [35.3025, 139.5232],
+      [35.2990, 139.5290],
+    ];
 
     function initWindMap() {
       if (windMap) return;
@@ -576,20 +575,21 @@
       }).addTo(windMap);
     }
 
-    function updateWindMarker(dir, speed) {
+    function updateWindMarkers(dir) {
       if (!windMap) return;
-      const color = windSpeedColor(speed);
-      const svg = `<svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(${dir + 180}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7))"><polygon points="18,2 10,30 18,22 26,30" fill="${color}" stroke="#fff" stroke-width="2"/></svg>`;
+      const svg = `<svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(${dir + 180}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7))"><polygon points="18,2 10,30 18,22 26,30" fill="#ff2d55" stroke="#fff" stroke-width="2"/></svg>`;
       const icon = L.divIcon({
         className: 'wind-map-arrow',
         html: svg,
         iconSize: [36, 36],
         iconAnchor: [18, 18]
       });
-      if (windMarker) {
-        windMarker.setIcon(icon);
+      if (windMarkers.length) {
+        windMarkers.forEach(m => m.setIcon(icon));
       } else {
-        windMarker = L.marker([LAT, LON], { icon: icon }).addTo(windMap);
+        ARROW_POSITIONS.forEach(pos => {
+          windMarkers.push(L.marker(pos, { icon: icon }).addTo(windMap));
+        });
       }
     }
 
@@ -655,10 +655,10 @@
 
       if (weatherResult.status === 'fulfilled') {
         const w = weatherResult.value.current;
-        windMarker = null;
+        windMarkers = [];
         windMap = null;
         initWindMap();
-        updateWindMarker(w.wind_direction_10m, w.wind_speed_10m);
+        updateWindMarkers(w.wind_direction_10m);
       }
 
       if (errors.length === 0) {
