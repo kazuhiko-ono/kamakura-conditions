@@ -10,20 +10,6 @@
       margin: 16px;
       max-width: 600px;
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 8px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px 10px;
-      text-align: left;
-    }
-    th {
-      background: #f5f5f5;
-      width: 40%;
-    }
     pre {
       background: #f0f0f0;
       padding: 8px;
@@ -34,6 +20,86 @@
       margin-top: 12px;
       padding: 8px 16px;
       font-size: 14px;
+    }
+    .wind-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .compass {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border: 2px solid #666;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .compass-labels {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .compass-labels span {
+      position: absolute;
+      font-size: 12px;
+      font-weight: bold;
+      color: #333;
+    }
+    .compass-labels .dir-n { top: 2px; left: 50%; transform: translateX(-50%); }
+    .compass-labels .dir-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+    .compass-labels .dir-e { right: 4px; top: 50%; transform: translateY(-50%); }
+    .compass-labels .dir-w { left: 4px; top: 50%; transform: translateY(-50%); }
+    .wind-arrow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 40px;
+      margin-left: -2px;
+      margin-top: -40px;
+      background: #e74c3c;
+      transform-origin: bottom center;
+    }
+    .wind-arrow::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: -5px;
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 10px solid #e74c3c;
+    }
+    .wind-info {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .wave-section {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .wave-bar-container {
+      width: 40px;
+      height: 100px;
+      background: #eee;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .wave-bar {
+      width: 100%;
+      background: #3498db;
+    }
+    .wave-info {
+      font-size: 14px;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -107,18 +173,31 @@
       const units = data.current_units;
       const weatherText = WEATHER_CODES[c.weather_code] || `コード: ${c.weather_code}`;
       const windDirText = windDirectionToText(c.wind_direction_10m);
+      const arrowDeg = c.wind_direction_10m;
 
       return `
         <h2>風・気象</h2>
-        <table id="weather-table">
-          <tr><th>天気</th><td>${weatherText}</td></tr>
-          <tr><th>気温</th><td>${c.temperature_2m}${units.temperature_2m}</td></tr>
-          <tr><th>体感温度</th><td>${c.apparent_temperature}${units.apparent_temperature}</td></tr>
-          <tr><th>風速</th><td>${c.wind_speed_10m}${units.wind_speed_10m}</td></tr>
-          <tr><th>風向</th><td>${windDirText}（${c.wind_direction_10m}${units.wind_direction_10m}）</td></tr>
-          <tr><th>突風</th><td>${c.wind_gusts_10m}${units.wind_gusts_10m}</td></tr>
-        </table>
-        <p>取得時刻: ${c.time}</p>
+        <div id="weather-table">
+          <div class="wind-section">
+            <div class="compass">
+              <div class="compass-labels">
+                <span class="dir-n">N</span>
+                <span class="dir-s">S</span>
+                <span class="dir-e">E</span>
+                <span class="dir-w">W</span>
+              </div>
+              <div class="wind-arrow" style="transform: rotate(${arrowDeg}deg)"></div>
+            </div>
+            <div class="wind-info">
+              <div>${weatherText}</div>
+              <div>気温 ${c.temperature_2m}${units.temperature_2m} / 体感 ${c.apparent_temperature}${units.apparent_temperature}</div>
+              <div>風速 ${c.wind_speed_10m}${units.wind_speed_10m}</div>
+              <div>風向 ${windDirText}（${c.wind_direction_10m}${units.wind_direction_10m}）</div>
+              <div>突風 ${c.wind_gusts_10m}${units.wind_gusts_10m}</div>
+            </div>
+          </div>
+          <p>取得時刻: ${c.time}</p>
+        </div>
       `;
     }
 
@@ -127,18 +206,26 @@
       const units = data.current_units;
       const waveDirText = windDirectionToText(c.wave_direction);
       const swellDirText = windDirectionToText(c.swell_wave_direction);
+      const barHeight = Math.max(10, Math.min(85, c.wave_height * 40));
 
       return `
         <h2>波</h2>
-        <table id="marine-table">
-          <tr><th>波高</th><td>${c.wave_height}${units.wave_height}</td></tr>
-          <tr><th>波向</th><td>${waveDirText}（${c.wave_direction}${units.wave_direction}）</td></tr>
-          <tr><th>波周期</th><td>${c.wave_period}${units.wave_period}</td></tr>
-          <tr><th>うねり高</th><td>${c.swell_wave_height}${units.swell_wave_height}</td></tr>
-          <tr><th>うねり向</th><td>${swellDirText}（${c.swell_wave_direction}${units.swell_wave_direction}）</td></tr>
-          <tr><th>うねり周期</th><td>${c.swell_wave_period}${units.swell_wave_period}</td></tr>
-        </table>
-        <p>取得時刻: ${c.time}</p>
+        <div id="marine-table">
+          <div class="wave-section">
+            <div class="wave-bar-container">
+              <div class="wave-bar" style="height: ${barHeight}px"></div>
+            </div>
+            <div class="wave-info">
+              <div>波高 ${c.wave_height}${units.wave_height}</div>
+              <div>波周期 ${c.wave_period}${units.wave_period}</div>
+              <div>波向 ${waveDirText}（${c.wave_direction}${units.wave_direction}）</div>
+              <div>うねり高 ${c.swell_wave_height}${units.swell_wave_height}</div>
+              <div>うねり周期 ${c.swell_wave_period}${units.swell_wave_period}</div>
+              <div>うねり向 ${swellDirText}（${c.swell_wave_direction}${units.swell_wave_direction}）</div>
+            </div>
+          </div>
+          <p>取得時刻: ${c.time}</p>
+        </div>
       `;
     }
 
