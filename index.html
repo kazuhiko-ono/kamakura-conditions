@@ -4,201 +4,338 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>鎌倉コンディション</title>
+  <meta name="theme-color" content="#0b1929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22%E9%8E%8C%E5%80%89%E3%82%B3%E3%83%B3%E3%83%87%E3%82%A3%E3%82%B7%E3%83%A7%E3%83%B3%22%2C%22short_name%22%3A%22%E9%8E%8C%E5%80%89%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1929%22%2C%22theme_color%22%3A%22%230b1929%22%7D">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: sans-serif;
-      margin: 16px;
-      max-width: 600px;
+      font-family: 'Noto Sans JP', sans-serif;
+      background: #0b1929;
+      color: #e0e8f0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
     }
-    pre {
-      background: #f0f0f0;
-      padding: 8px;
-      overflow-x: auto;
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      padding: 0 12px 24px;
+    }
+
+    /* --- Header --- */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0 8px;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: #7aa2c4;
+      margin-top: 2px;
+    }
+    #reloadBtn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      color: #7ec8e3;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    #reloadBtn:active { background: rgba(255,255,255,0.16); }
+    #reloadBtn.spinning #refresh {
+      animation: spin 0.8s ease;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #refresh {
+      display: inline-block;
+      line-height: 1;
+    }
+
+    #updateTime {
+      font-size: 11px;
+      color: #7aa2c4;
+      text-align: right;
+      padding-bottom: 8px;
+    }
+
+    /* --- Status (hidden visually, kept for tests) --- */
+    #status {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+    }
+
+    /* --- Cards --- */
+    .card {
+      background: #122640;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      animation: fadeIn 0.4s ease both;
+    }
+    .card:nth-child(2) { animation-delay: 0.05s; }
+    .card:nth-child(3) { animation-delay: 0.1s; }
+    .card:nth-child(4) { animation-delay: 0.15s; }
+    .card:nth-child(5) { animation-delay: 0.2s; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card h2 {
+      font-size: 13px;
+      color: #7aa2c4;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* --- Condition --- */
+    .condition-section { margin-bottom: 0; }
+    .condition-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+    }
+    .condition-badge.good { background: #1b8c4e; }
+    .condition-badge.ok { background: #c8850a; }
+    .condition-badge.caution { background: #c0392b; }
+    .activity-list {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .activity-badge {
+      padding: 5px 10px;
+      border-radius: 6px;
       font-size: 12px;
+      font-weight: 700;
+      color: #fff;
     }
-    button {
-      margin-top: 12px;
-      padding: 8px 16px;
-      font-size: 14px;
-    }
+    .activity-badge.active { background: #1b8c4e; }
+    .activity-badge.marginal { background: #c8850a; }
+    .activity-badge.inactive { background: #4a5568; }
+
+    /* --- Wind --- */
     .wind-section {
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-top: 8px;
     }
     .compass {
       position: relative;
-      width: 100px;
-      height: 100px;
-      border: 2px solid #666;
+      width: 96px;
+      height: 96px;
+      border: 2px solid #2a4a6b;
       border-radius: 50%;
       flex-shrink: 0;
+      background: rgba(0,0,0,0.15);
     }
     .compass-labels {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
     }
     .compass-labels span {
       position: absolute;
-      font-size: 12px;
-      font-weight: bold;
-      color: #333;
+      font-size: 11px;
+      font-weight: 700;
+      color: #7aa2c4;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .compass-labels .dir-n { top: 2px; left: 50%; transform: translateX(-50%); }
-    .compass-labels .dir-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
-    .compass-labels .dir-e { right: 4px; top: 50%; transform: translateY(-50%); }
-    .compass-labels .dir-w { left: 4px; top: 50%; transform: translateY(-50%); }
+    .compass-labels .dir-n { top: 4px; left: 50%; transform: translateX(-50%); }
+    .compass-labels .dir-s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+    .compass-labels .dir-e { right: 6px; top: 50%; transform: translateY(-50%); }
+    .compass-labels .dir-w { left: 6px; top: 50%; transform: translateY(-50%); }
     .wind-arrow {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 4px;
-      height: 40px;
+      top: 50%; left: 50%;
+      width: 4px; height: 36px;
       margin-left: -2px;
-      margin-top: -40px;
+      margin-top: -36px;
       background: #e74c3c;
       transform-origin: bottom center;
+      transition: transform 0.6s ease;
     }
     .wind-arrow::after {
       content: '';
       position: absolute;
-      top: -6px;
-      left: -5px;
-      width: 0;
-      height: 0;
+      top: -6px; left: -5px;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
       border-bottom: 10px solid #e74c3c;
     }
     .wind-info {
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
     }
+    .wind-info .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #7ec8e3;
+    }
+
+    /* --- Wave --- */
     .wave-section {
       display: flex;
       align-items: flex-end;
       gap: 16px;
-      margin-top: 8px;
     }
     .wave-bar-container {
-      width: 40px;
-      height: 100px;
-      background: #eee;
-      border: 1px solid #ccc;
+      width: 36px;
+      height: 96px;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid #2a4a6b;
+      border-radius: 6px;
       display: flex;
       align-items: flex-end;
       flex-shrink: 0;
+      overflow: hidden;
     }
     .wave-bar {
       width: 100%;
-      background: #3498db;
+      background: linear-gradient(to top, #2980b9, #7ec8e3);
+      border-radius: 0 0 5px 5px;
+      transition: height 0.6s ease;
     }
     .wave-info {
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
     }
-    .condition-section {
-      margin-bottom: 12px;
+    .wave-info .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #7ec8e3;
     }
-    .condition-badge {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 4px;
-      font-weight: bold;
-      font-size: 16px;
-      color: #fff;
-    }
-    .condition-badge.good { background: #27ae60; }
-    .condition-badge.ok { background: #f39c12; }
-    .condition-badge.caution { background: #e74c3c; }
-    .activity-list {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-    .activity-badge {
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: bold;
-      color: #fff;
-    }
-    .activity-badge.active { background: #27ae60; }
-    .activity-badge.marginal { background: #f39c12; }
-    .activity-badge.inactive { background: #95a5a6; }
+
+    /* --- Hourly --- */
     .hourly-scroll {
       overflow-x: auto;
       white-space: nowrap;
-      padding: 8px 0;
-      margin-top: 8px;
+      padding: 4px 0;
+      -webkit-overflow-scrolling: touch;
     }
     .hour-item {
       display: inline-block;
       text-align: center;
-      padding: 6px 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-right: 4px;
-      font-size: 13px;
+      padding: 8px 8px;
+      border-radius: 8px;
+      margin-right: 6px;
+      font-size: 12px;
       vertical-align: top;
       white-space: normal;
-      min-width: 60px;
+      min-width: 58px;
+      background: rgba(0,0,0,0.15);
     }
     .hour-item.now {
-      background: #ebf5fb;
-      border-color: #3498db;
-      font-weight: bold;
+      background: rgba(126,200,227,0.15);
+      box-shadow: inset 0 0 0 1.5px #7ec8e3;
+      font-weight: 700;
     }
     .hour-item .h-time {
-      font-weight: bold;
-      margin-bottom: 2px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 4px;
     }
-    .hour-item .h-icon {
-      font-size: 18px;
+    .hour-item .h-icon { font-size: 18px; }
+    .hour-item .h-wind,
+    .hour-item .h-wave {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      margin-top: 2px;
     }
-    .daily-section {
-      margin-top: 12px;
-    }
+    .hour-item .h-wave { color: #7ec8e3; }
+
+    /* --- Daily --- */
+    .daily-section { margin-top: 4px; }
     .daily-row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
     }
+    .daily-row:last-child { border-bottom: none; }
     .daily-row .d-date {
-      min-width: 70px;
-      font-weight: bold;
+      min-width: 64px;
+      font-weight: 700;
     }
-    .daily-row .d-icon {
-      font-size: 20px;
-    }
+    .daily-row .d-icon { font-size: 20px; }
     .daily-row .d-temp {
-      min-width: 90px;
+      min-width: 80px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .daily-row .d-wind,
+    .daily-row .d-rain {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    .daily-row .d-rain { color: #7aa2c4; }
+
+    /* --- Error --- */
+    .error-msg {
+      color: #e07070;
+      font-size: 13px;
+      padding: 8px 0;
+    }
+
+    /* --- Loading --- */
+    .loading-text {
+      text-align: center;
+      padding: 40px 0;
+      color: #7aa2c4;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>鎌倉コンディション</h1>
-  <p>七里ヶ浜〜坂ノ下エリア</p>
 
-  <p id="status">読み込み中...</p>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="header-title">鎌倉コンディション</div>
+        <div class="header-sub">七里ヶ浜〜坂ノ下 35.30N 139.52E</div>
+      </div>
+      <button id="reloadBtn" onclick="handleReload()">
+        <span id="refresh">&#x21bb;</span>
+      </button>
+    </div>
 
-  <div id="result"></div>
+    <div id="updateTime"></div>
 
-  <button id="refresh" onclick="fetchAll()">再取得</button>
+    <p id="status">読み込み中...</p>
 
-  <h2>デバッグ: 生JSON</h2>
-  <h3>Weather API</h3>
-  <pre id="debug-weather"></pre>
-  <h3>Marine API</h3>
-  <pre id="debug-marine"></pre>
+    <div id="result">
+      <div class="loading-text">読み込み中...</div>
+    </div>
+  </div>
 
   <script>
     const LAT = 35.3025;
@@ -207,82 +344,14 @@
     const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&hourly=wave_height&forecast_hours=25&timezone=Asia%2FTokyo`;
 
     const WEATHER_CODES = {
-      0: '快晴',
-      1: '晴れ',
-      2: '一部曇り',
-      3: '曇り',
-      45: '霧',
-      48: '着氷性の霧',
-      51: '弱い霧雨',
-      53: '霧雨',
-      55: '強い霧雨',
-      61: '弱い雨',
-      63: '雨',
-      65: '強い雨',
-      71: '弱い雪',
-      73: '雪',
-      75: '強い雪',
-      80: '弱いにわか雨',
-      81: 'にわか雨',
-      82: '強いにわか雨',
-      95: '雷雨',
-      96: '雹を伴う雷雨',
-      99: '強い雹を伴う雷雨'
+      0: '快晴', 1: '晴れ', 2: '一部曇り', 3: '曇り',
+      45: '霧', 48: '着氷性の霧',
+      51: '弱い霧雨', 53: '霧雨', 55: '強い霧雨',
+      61: '弱い雨', 63: '雨', 65: '強い雨',
+      71: '弱い雪', 73: '雪', 75: '強い雪',
+      80: '弱いにわか雨', 81: 'にわか雨', 82: '強いにわか雨',
+      95: '雷雨', 96: '雹を伴う雷雨', 99: '強い雹を伴う雷雨'
     };
-
-    function windDirectionToText(deg) {
-      const dirs = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東',
-                     '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
-      const index = Math.round(deg / 22.5) % 16;
-      return dirs[index];
-    }
-
-    function judgeWingfoil(windSpeed, waveHeight) {
-      if (windSpeed >= 15 && windSpeed <= 35 && waveHeight <= 2.0) return 'active';
-      if (windSpeed >= 10 && windSpeed <= 40 && waveHeight <= 2.5) return 'marginal';
-      return 'inactive';
-    }
-
-    function judgeSurf(windSpeed, waveHeight) {
-      if (waveHeight >= 0.5 && waveHeight <= 2.5 && windSpeed <= 15) return 'active';
-      if (waveHeight >= 0.3 && waveHeight <= 3.0 && windSpeed <= 20) return 'marginal';
-      return 'inactive';
-    }
-
-    function judgeSup(windSpeed, waveHeight) {
-      if (windSpeed <= 10 && waveHeight <= 0.5) return 'active';
-      if (windSpeed <= 15 && waveHeight <= 1.0) return 'marginal';
-      return 'inactive';
-    }
-
-    function judgeOverall(windSpeed, windGusts, waveHeight, activities) {
-      if (windGusts > 35 || waveHeight > 3.0) return 'caution';
-      if (activities.some(a => a.level === 'active')) return 'good';
-      return 'ok';
-    }
-
-    const OVERALL_LABELS = { good: 'GOOD', ok: 'OK', caution: 'CAUTION' };
-    const ACTIVITY_LABELS = { active: '適', marginal: '微妙', inactive: '不適' };
-
-    function renderCondition(windSpeed, windGusts, waveHeight) {
-      const activities = [
-        { name: 'ウィングフォイル', level: judgeWingfoil(windSpeed, waveHeight) },
-        { name: 'サーフィン', level: judgeSurf(windSpeed, waveHeight) },
-        { name: 'SUP', level: judgeSup(windSpeed, waveHeight) },
-      ];
-      const overall = judgeOverall(windSpeed, windGusts, waveHeight, activities);
-
-      return `
-        <div class="condition-section">
-          <span class="condition-badge ${overall}">${OVERALL_LABELS[overall]}</span>
-          <div class="activity-list">
-            ${activities.map(a =>
-              `<span class="activity-badge ${a.level}">${a.name}: ${ACTIVITY_LABELS[a.level]}</span>`
-            ).join('')}
-          </div>
-        </div>
-      `;
-    }
 
     const WEATHER_ICONS = {
       0: '\u2600\uFE0F', 1: '\u{1F324}\uFE0F', 2: '\u26C5', 3: '\u2601\uFE0F',
@@ -294,97 +363,57 @@
       95: '\u26C8\uFE0F', 96: '\u26C8\uFE0F', 99: '\u26C8\uFE0F'
     };
 
-    function findNowIndex(times) {
-      const now = new Date();
-      const nowHour = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:00`;
-      const idx = times.indexOf(nowHour);
-      return idx >= 0 ? idx : 0;
-    }
-
-    function renderHourly(weatherData, marineData) {
-      const wh = weatherData ? weatherData.hourly : null;
-      const mh = marineData ? marineData.hourly : null;
-      if (!wh && !mh) return '';
-
-      const times = wh ? wh.time : mh.time;
-      const nowIdx = findNowIndex(times);
-
-      let items = '';
-      for (let i = 0; i < times.length; i++) {
-        const hour = times[i].slice(11, 16);
-        const isNow = i === nowIdx;
-        const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
-        const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
-        const wind = wh ? `<div class="h-wind">${wh.wind_speed_10m[i]}km/h</div>` : '';
-        const wave = mh ? `<div class="h-wave">${mh.wave_height[i]}m</div>` : '';
-
-        items += `<div class="hour-item${isNow ? ' now' : ''}">
-          <div class="h-time">${hour}</div>
-          <div class="h-icon">${icon}</div>
-          <div>${temp}</div>
-          ${wind}
-          ${wave}
-        </div>`;
-      }
-
-      return `
-        <h2>時間別予報</h2>
-        <div class="hourly-scroll">${items}</div>
-      `;
-    }
-
     const DAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
-    function renderDaily(weatherData) {
-      if (!weatherData || !weatherData.daily) return '';
-      const d = weatherData.daily;
-
-      let rows = '';
-      for (let i = 0; i < d.time.length; i++) {
-        let dateLabel;
-        if (i === 0) {
-          dateLabel = '今日';
-        } else if (i === 1) {
-          dateLabel = '明日';
-        } else {
-          const dt = new Date(d.time[i] + 'T00:00:00');
-          const m = dt.getMonth() + 1;
-          const day = dt.getDate();
-          const dow = DAY_NAMES[dt.getDay()];
-          dateLabel = `${m}/${day}(${dow})`;
-        }
-
-        const icon = WEATHER_ICONS[d.weather_code[i]] || '';
-        const tMax = d.temperature_2m_max[i];
-        const tMin = d.temperature_2m_min[i];
-        const wind = d.wind_speed_10m_max[i];
-        const rain = d.precipitation_probability_max[i];
-
-        rows += `<div class="daily-row">
-          <span class="d-date">${dateLabel}</span>
-          <span class="d-icon">${icon}</span>
-          <span class="d-temp">${tMax}\u00B0 / ${tMin}\u00B0</span>
-          <span>${wind}km/h</span>
-          <span>${rain != null ? rain + '%' : '-'}</span>
-        </div>`;
-      }
-
-      return `
-        <h2>3日間予報</h2>
-        <div class="daily-section">${rows}</div>
-      `;
+    function windDirectionToText(deg) {
+      const dirs = ['北','北北東','北東','東北東','東','東南東','南東','南南東',
+                     '南','南南西','南西','西南西','西','西北西','北西','北北西'];
+      return dirs[Math.round(deg / 22.5) % 16];
     }
 
-    async function fetchWeatherData() {
-      const res = await fetch(WEATHER_URL);
-      if (!res.ok) throw new Error(`Weather API HTTP ${res.status}`);
-      return await res.json();
+    /* --- Condition judgement --- */
+    function judgeWingfoil(ws, wh) {
+      if (ws >= 15 && ws <= 35 && wh <= 2.0) return 'active';
+      if (ws >= 10 && ws <= 40 && wh <= 2.5) return 'marginal';
+      return 'inactive';
+    }
+    function judgeSurf(ws, wh) {
+      if (wh >= 0.5 && wh <= 2.5 && ws <= 15) return 'active';
+      if (wh >= 0.3 && wh <= 3.0 && ws <= 20) return 'marginal';
+      return 'inactive';
+    }
+    function judgeSup(ws, wh) {
+      if (ws <= 10 && wh <= 0.5) return 'active';
+      if (ws <= 15 && wh <= 1.0) return 'marginal';
+      return 'inactive';
+    }
+    function judgeOverall(ws, wg, wh, acts) {
+      if (wg > 35 || wh > 3.0) return 'caution';
+      if (acts.some(a => a.level === 'active')) return 'good';
+      return 'ok';
     }
 
-    async function fetchMarineData() {
-      const res = await fetch(MARINE_URL);
-      if (!res.ok) throw new Error(`Marine API HTTP ${res.status}`);
-      return await res.json();
+    const OVERALL_LABELS = { good: 'GOOD', ok: 'OK', caution: 'CAUTION' };
+    const ACTIVITY_LABELS = { active: '適', marginal: '微妙', inactive: '不適' };
+
+    /* --- Render functions --- */
+    function renderCondition(ws, wg, wh) {
+      const activities = [
+        { name: 'ウィングフォイル', level: judgeWingfoil(ws, wh) },
+        { name: 'サーフィン', level: judgeSurf(ws, wh) },
+        { name: 'SUP', level: judgeSup(ws, wh) },
+      ];
+      const overall = judgeOverall(ws, wg, wh, activities);
+      return `<div class="card">
+        <div class="condition-section">
+          <span class="condition-badge ${overall}">${OVERALL_LABELS[overall]}</span>
+          <div class="activity-list">
+            ${activities.map(a =>
+              `<span class="activity-badge ${a.level}">${a.name}: ${ACTIVITY_LABELS[a.level]}</span>`
+            ).join('')}
+          </div>
+        </div>
+      </div>`;
     }
 
     function renderWeather(data) {
@@ -392,9 +421,7 @@
       const units = data.current_units;
       const weatherText = WEATHER_CODES[c.weather_code] || `コード: ${c.weather_code}`;
       const windDirText = windDirectionToText(c.wind_direction_10m);
-      const arrowDeg = c.wind_direction_10m;
-
-      return `
+      return `<div class="card">
         <h2>風・気象</h2>
         <div id="weather-table">
           <div class="wind-section">
@@ -405,19 +432,18 @@
                 <span class="dir-e">E</span>
                 <span class="dir-w">W</span>
               </div>
-              <div class="wind-arrow" style="transform: rotate(${arrowDeg}deg)"></div>
+              <div class="wind-arrow" style="transform: rotate(${c.wind_direction_10m}deg)"></div>
             </div>
             <div class="wind-info">
               <div>${weatherText}</div>
-              <div>気温 ${c.temperature_2m}${units.temperature_2m} / 体感 ${c.apparent_temperature}${units.apparent_temperature}</div>
-              <div>風速 ${c.wind_speed_10m}${units.wind_speed_10m}</div>
-              <div>風向 ${windDirText}（${c.wind_direction_10m}${units.wind_direction_10m}）</div>
-              <div>突風 ${c.wind_gusts_10m}${units.wind_gusts_10m}</div>
+              <div>気温 <span class="val">${c.temperature_2m}${units.temperature_2m}</span> / 体感 <span class="val">${c.apparent_temperature}${units.apparent_temperature}</span></div>
+              <div>風速 <span class="val">${c.wind_speed_10m}${units.wind_speed_10m}</span></div>
+              <div>風向 ${windDirText}（<span class="val">${c.wind_direction_10m}${units.wind_direction_10m}</span>）</div>
+              <div>突風 <span class="val">${c.wind_gusts_10m}${units.wind_gusts_10m}</span></div>
             </div>
           </div>
-          <p>取得時刻: ${c.time}</p>
         </div>
-      `;
+      </div>`;
     }
 
     function renderMarine(data) {
@@ -426,8 +452,7 @@
       const waveDirText = windDirectionToText(c.wave_direction);
       const swellDirText = windDirectionToText(c.swell_wave_direction);
       const barHeight = Math.max(10, Math.min(85, c.wave_height * 40));
-
-      return `
+      return `<div class="card">
         <h2>波</h2>
         <div id="marine-table">
           <div class="wave-section">
@@ -435,29 +460,100 @@
               <div class="wave-bar" style="height: ${barHeight}px"></div>
             </div>
             <div class="wave-info">
-              <div>波高 ${c.wave_height}${units.wave_height}</div>
-              <div>波周期 ${c.wave_period}${units.wave_period}</div>
-              <div>波向 ${waveDirText}（${c.wave_direction}${units.wave_direction}）</div>
-              <div>うねり高 ${c.swell_wave_height}${units.swell_wave_height}</div>
-              <div>うねり周期 ${c.swell_wave_period}${units.swell_wave_period}</div>
-              <div>うねり向 ${swellDirText}（${c.swell_wave_direction}${units.swell_wave_direction}）</div>
+              <div>波高 <span class="val">${c.wave_height}${units.wave_height}</span></div>
+              <div>波周期 <span class="val">${c.wave_period}${units.wave_period}</span></div>
+              <div>波向 ${waveDirText}（<span class="val">${c.wave_direction}${units.wave_direction}</span>）</div>
+              <div>うねり高 <span class="val">${c.swell_wave_height}${units.swell_wave_height}</span></div>
+              <div>うねり周期 <span class="val">${c.swell_wave_period}${units.swell_wave_period}</span></div>
+              <div>うねり向 ${swellDirText}（<span class="val">${c.swell_wave_direction}${units.swell_wave_direction}</span>）</div>
             </div>
           </div>
-          <p>取得時刻: ${c.time}</p>
         </div>
-      `;
+      </div>`;
+    }
+
+    function findNowIndex(times) {
+      const now = new Date();
+      const nowHour = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:00`;
+      const idx = times.indexOf(nowHour);
+      return idx >= 0 ? idx : 0;
+    }
+
+    function renderHourly(weatherData, marineData) {
+      const wh = weatherData ? weatherData.hourly : null;
+      const mh = marineData ? marineData.hourly : null;
+      if (!wh && !mh) return '';
+      const times = wh ? wh.time : mh.time;
+      const nowIdx = findNowIndex(times);
+      let items = '';
+      for (let i = 0; i < times.length; i++) {
+        const hour = times[i].slice(11, 16);
+        const isNow = i === nowIdx;
+        const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
+        const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
+        const wind = wh ? `<div class="h-wind">${wh.wind_speed_10m[i]}km/h</div>` : '';
+        const wave = mh ? `<div class="h-wave">${mh.wave_height[i]}m</div>` : '';
+        items += `<div class="hour-item${isNow ? ' now' : ''}">
+          <div class="h-time">${hour}</div>
+          <div class="h-icon">${icon}</div>
+          <div>${temp}</div>
+          ${wind}
+          ${wave}
+        </div>`;
+      }
+      return `<div class="card">
+        <h2>時間別予報</h2>
+        <div class="hourly-scroll">${items}</div>
+      </div>`;
+    }
+
+    function renderDaily(weatherData) {
+      if (!weatherData || !weatherData.daily) return '';
+      const d = weatherData.daily;
+      let rows = '';
+      for (let i = 0; i < d.time.length; i++) {
+        let dateLabel;
+        if (i === 0) dateLabel = '今日';
+        else if (i === 1) dateLabel = '明日';
+        else {
+          const dt = new Date(d.time[i] + 'T00:00:00');
+          dateLabel = `${dt.getMonth()+1}/${dt.getDate()}(${DAY_NAMES[dt.getDay()]})`;
+        }
+        const icon = WEATHER_ICONS[d.weather_code[i]] || '';
+        const rain = d.precipitation_probability_max[i];
+        rows += `<div class="daily-row">
+          <span class="d-date">${dateLabel}</span>
+          <span class="d-icon">${icon}</span>
+          <span class="d-temp">${d.temperature_2m_max[i]}\u00B0 / ${d.temperature_2m_min[i]}\u00B0</span>
+          <span class="d-wind">${d.wind_speed_10m_max[i]}km/h</span>
+          <span class="d-rain">${rain != null ? rain + '%' : '-'}</span>
+        </div>`;
+      }
+      return `<div class="card">
+        <h2>3日間予報</h2>
+        <div class="daily-section">${rows}</div>
+      </div>`;
+    }
+
+    /* --- Data fetch --- */
+    async function fetchWeatherData() {
+      const res = await fetch(WEATHER_URL);
+      if (!res.ok) throw new Error(`Weather API HTTP ${res.status}`);
+      return await res.json();
+    }
+    async function fetchMarineData() {
+      const res = await fetch(MARINE_URL);
+      if (!res.ok) throw new Error(`Marine API HTTP ${res.status}`);
+      return await res.json();
     }
 
     async function fetchAll() {
       const statusEl = document.getElementById('status');
       const resultEl = document.getElementById('result');
-      const debugWeatherEl = document.getElementById('debug-weather');
-      const debugMarineEl = document.getElementById('debug-marine');
+      const updateTimeEl = document.getElementById('updateTime');
 
       statusEl.textContent = '読み込み中...';
-      resultEl.innerHTML = '';
-      debugWeatherEl.textContent = '';
-      debugMarineEl.textContent = '';
+      resultEl.innerHTML = '<div class="loading-text">読み込み中...</div>';
 
       const [weatherResult, marineResult] = await Promise.allSettled([
         fetchWeatherData(),
@@ -470,19 +566,15 @@
 
       if (weatherResult.status === 'fulfilled') {
         html += renderWeather(weatherResult.value);
-        debugWeatherEl.textContent = JSON.stringify(weatherResult.value, null, 2);
       } else {
-        html += '<h2>風・気象</h2><p>風データを取得できませんでした。</p>';
-        debugWeatherEl.textContent = String(weatherResult.reason);
+        html += '<div class="card"><h2>風・気象</h2><p class="error-msg">風データを取得できませんでした。</p></div>';
         errors.push('風データ');
       }
 
       if (marineResult.status === 'fulfilled') {
         html += renderMarine(marineResult.value);
-        debugMarineEl.textContent = JSON.stringify(marineResult.value, null, 2);
       } else {
-        html += '<h2>波</h2><p>波データを取得できませんでした。</p>';
-        debugMarineEl.textContent = String(marineResult.reason);
+        html += '<div class="card"><h2>波</h2><p class="error-msg">波データを取得できませんでした。</p></div>';
         errors.push('波データ');
       }
 
@@ -510,9 +602,20 @@
       } else {
         statusEl.textContent = `一部エラー: ${errors.join('、')}の取得に失敗`;
       }
+
+      const now = new Date();
+      updateTimeEl.textContent = `更新: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function handleReload() {
+      const btn = document.getElementById('reloadBtn');
+      btn.classList.add('spinning');
+      setTimeout(() => btn.classList.remove('spinning'), 800);
+      fetchAll();
     }
 
     fetchAll();
+    setInterval(fetchAll, 10 * 60 * 1000);
   </script>
 </body>
 </html>
