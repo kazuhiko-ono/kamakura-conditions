@@ -8,10 +8,10 @@ test.describe('Phase 1: 風データ取得と表示', () => {
     await expect(page.locator('#weather-table')).toBeVisible();
   });
 
-  test('風速（km/h）が表示される', async ({ page }) => {
+  test('風速（m/s）が表示される', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
-    await expect(page.locator('#result')).toContainText('km/h');
+    await expect(page.locator('#result')).toContainText('m/s');
   });
 
   test('気温（°C）が表示される', async ({ page }) => {
