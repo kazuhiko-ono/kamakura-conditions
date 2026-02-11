@@ -131,6 +131,36 @@
     .activity-badge.active { background: #27ae60; }
     .activity-badge.marginal { background: #f39c12; }
     .activity-badge.inactive { background: #95a5a6; }
+    .hourly-scroll {
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 8px 0;
+      margin-top: 8px;
+    }
+    .hour-item {
+      display: inline-block;
+      text-align: center;
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 4px;
+      font-size: 13px;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 60px;
+    }
+    .hour-item.now {
+      background: #ebf5fb;
+      border-color: #3498db;
+      font-weight: bold;
+    }
+    .hour-item .h-time {
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    .hour-item .h-icon {
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
@@ -152,8 +182,8 @@
   <script>
     const LAT = 35.3025;
     const LON = 139.5232;
-    const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&timezone=Asia%2FTokyo`;
-    const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&timezone=Asia%2FTokyo`;
+    const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&forecast_hours=25&timezone=Asia%2FTokyo`;
+    const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&hourly=wave_height&forecast_hours=25&timezone=Asia%2FTokyo`;
 
     const WEATHER_CODES = {
       0: '快晴',
@@ -230,6 +260,55 @@
             ).join('')}
           </div>
         </div>
+      `;
+    }
+
+    const WEATHER_ICONS = {
+      0: '\u2600\uFE0F', 1: '\u{1F324}\uFE0F', 2: '\u26C5', 3: '\u2601\uFE0F',
+      45: '\u{1F32B}\uFE0F', 48: '\u{1F32B}\uFE0F',
+      51: '\u{1F326}\uFE0F', 53: '\u{1F326}\uFE0F', 55: '\u{1F326}\uFE0F',
+      61: '\u{1F327}\uFE0F', 63: '\u{1F327}\uFE0F', 65: '\u{1F327}\uFE0F',
+      71: '\u2744\uFE0F', 73: '\u2744\uFE0F', 75: '\u2744\uFE0F',
+      80: '\u{1F326}\uFE0F', 81: '\u{1F327}\uFE0F', 82: '\u{1F327}\uFE0F',
+      95: '\u26C8\uFE0F', 96: '\u26C8\uFE0F', 99: '\u26C8\uFE0F'
+    };
+
+    function findNowIndex(times) {
+      const now = new Date();
+      const nowHour = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:00`;
+      const idx = times.indexOf(nowHour);
+      return idx >= 0 ? idx : 0;
+    }
+
+    function renderHourly(weatherData, marineData) {
+      const wh = weatherData ? weatherData.hourly : null;
+      const mh = marineData ? marineData.hourly : null;
+      if (!wh && !mh) return '';
+
+      const times = wh ? wh.time : mh.time;
+      const nowIdx = findNowIndex(times);
+
+      let items = '';
+      for (let i = 0; i < times.length; i++) {
+        const hour = times[i].slice(11, 16);
+        const isNow = i === nowIdx;
+        const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
+        const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
+        const wind = wh ? `<div class="h-wind">${wh.wind_speed_10m[i]}km/h</div>` : '';
+        const wave = mh ? `<div class="h-wave">${mh.wave_height[i]}m</div>` : '';
+
+        items += `<div class="hour-item${isNow ? ' now' : ''}">
+          <div class="h-time">${hour}</div>
+          <div class="h-icon">${icon}</div>
+          <div>${temp}</div>
+          ${wind}
+          ${wave}
+        </div>`;
+      }
+
+      return `
+        <h2>時間別予報</h2>
+        <div class="hourly-scroll">${items}</div>
       `;
     }
 
@@ -350,7 +429,12 @@
         conditionHtml = renderCondition(w.wind_speed_10m, w.wind_gusts_10m, m.wave_height);
       }
 
-      resultEl.innerHTML = conditionHtml + html;
+      const hourlyHtml = renderHourly(
+        weatherResult.status === 'fulfilled' ? weatherResult.value : null,
+        marineResult.status === 'fulfilled' ? marineResult.value : null
+      );
+
+      resultEl.innerHTML = conditionHtml + html + hourlyHtml;
 
       if (errors.length === 0) {
         statusEl.textContent = '取得成功';
