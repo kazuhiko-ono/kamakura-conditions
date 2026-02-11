@@ -570,9 +570,9 @@
       const el = document.getElementById('wind-map');
       if (!el) return;
       windMap = L.map('wind-map', { zoomControl: false, attributionControl: true }).setView([LAT, LON], 15);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
+      L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
       }).addTo(windMap);
     }
 
