@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22%E9%8E%8C%E5%80%89%E3%82%B3%E3%83%B3%E3%83%87%E3%82%A3%E3%82%B7%E3%83%A7%E3%83%B3%22%2C%22short_name%22%3A%22%E9%8E%8C%E5%80%89%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1929%22%2C%22theme_color%22%3A%22%230b1929%22%7D">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
@@ -299,6 +300,21 @@
     }
     .daily-row .d-rain { color: #7aa2c4; }
 
+    /* --- Wind Map --- */
+    #wind-map {
+      height: 250px;
+      border-radius: 8px;
+      margin-top: 12px;
+      z-index: 0;
+    }
+    .wind-map-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      line-height: 1;
+    }
+
     /* --- Error --- */
     .error-msg {
       color: #e07070;
@@ -337,6 +353,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const LAT = 35.3025;
     const LON = 139.5232;
@@ -444,6 +461,7 @@
               <div>突風 <span class="val">${c.wind_gusts_10m} m/s</span>（${msToKt(c.wind_gusts_10m)} kt）</div>
             </div>
           </div>
+          <div id="wind-map"></div>
         </div>
       </div>`;
     }
@@ -537,6 +555,44 @@
       </div>`;
     }
 
+    /* --- Wind Map --- */
+    let windMap = null;
+    let windMarker = null;
+
+    function windSpeedColor(ms) {
+      if (ms >= 8) return '#e74c3c';
+      if (ms >= 4) return '#2ecc71';
+      return '#3498db';
+    }
+
+    function initWindMap() {
+      if (windMap) return;
+      const el = document.getElementById('wind-map');
+      if (!el) return;
+      windMap = L.map('wind-map', { zoomControl: false, attributionControl: true }).setView([LAT, LON], 15);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(windMap);
+    }
+
+    function updateWindMarker(dir, speed) {
+      if (!windMap) return;
+      const color = windSpeedColor(speed);
+      const svg = `<svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(${dir}deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))"><polygon points="18,2 12,28 18,22 24,28" fill="${color}" stroke="#fff" stroke-width="1.5"/></svg>`;
+      const icon = L.divIcon({
+        className: 'wind-map-arrow',
+        html: svg,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+      if (windMarker) {
+        windMarker.setIcon(icon);
+      } else {
+        windMarker = L.marker([LAT, LON], { icon: icon }).addTo(windMap);
+      }
+    }
+
     /* --- Data fetch --- */
     async function fetchWeatherData() {
       const res = await fetch(WEATHER_URL);
@@ -596,6 +652,14 @@
       );
 
       resultEl.innerHTML = conditionHtml + html + hourlyHtml + dailyHtml;
+
+      if (weatherResult.status === 'fulfilled') {
+        const w = weatherResult.value.current;
+        windMarker = null;
+        windMap = null;
+        initWindMap();
+        updateWindMarker(w.wind_direction_10m, w.wind_speed_10m);
+      }
 
       if (errors.length === 0) {
         statusEl.textContent = '取得成功';
