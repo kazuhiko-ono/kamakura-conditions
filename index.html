@@ -141,6 +141,26 @@
     .activity-badge.active { background: #1b8c4e; }
     .activity-badge.marginal { background: #c8850a; }
     .activity-badge.inactive { background: #4a5568; }
+    .activity-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .activity-note {
+      font-size: 10px;
+      color: #7aa2c4;
+      padding-left: 2px;
+    }
+    .wind-type-label {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(126,200,227,0.15);
+      color: #7ec8e3;
+      margin-left: 4px;
+    }
 
     /* --- Wind --- */
     .wind-section {
@@ -390,21 +410,39 @@
 
     function msToKt(ms) { return (ms * 1.944).toFixed(1); }
 
+    /* --- Wind direction classification --- */
+    const COAST_BEARING = 200;
+    const WIND_TYPE_LABELS = { offshore: 'オフショア', onshore: 'オンショア', sideshore: 'サイドショア', calm: '穏やか' };
+
+    function classifyWind(dir, speed) {
+      if (speed <= 2) return 'calm';
+      let diff = ((dir - COAST_BEARING) % 360 + 360) % 360;
+      if (diff > 180) diff = 360 - diff;
+      if (diff >= 135) return 'offshore';
+      if (diff <= 45) return 'onshore';
+      return 'sideshore';
+    }
+
     /* --- Condition judgement --- */
-    function judgeWingfoil(ws, wh) {
-      if (ws >= 4 && ws <= 10 && wh <= 2.0) return 'active';
-      if (ws >= 3 && ws <= 11 && wh <= 2.5) return 'marginal';
-      return 'inactive';
+    function judgeWingfoil(ws, wh, wt) {
+      if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'sideshore') return { level: 'active', note: 'サイドショア◎' };
+      if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'offshore') return { level: 'active', note: '沖に流されるリスク注意' };
+      if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'onshore') return { level: 'marginal', note: 'オンショア、帰りにくい' };
+      if (ws >= 3 && ws <= 15 && wh <= 2.0) return { level: 'marginal', note: '' };
+      return { level: 'inactive', note: '' };
     }
-    function judgeSurf(ws, wh) {
-      if (wh >= 0.5 && wh <= 2.5 && ws <= 4) return 'active';
-      if (wh >= 0.3 && wh <= 3.0 && ws <= 6) return 'marginal';
-      return 'inactive';
+    function judgeSurf(ws, wh, wt) {
+      if (wh >= 0.5 && wh <= 2.5 && ws <= 8 && wt === 'offshore') return { level: 'active', note: 'オフショア、面◎' };
+      if (wh >= 0.5 && wh <= 2.5 && ws <= 5 && (wt === 'sideshore' || wt === 'calm')) return { level: 'active', note: wt === 'calm' ? '無風、面◎' : '' };
+      if (wh >= 0.5 && wh <= 2.5 && ws <= 8 && wt === 'onshore') return { level: 'marginal', note: 'オンショア、面が崩れる' };
+      if (wh >= 0.3 && wh <= 3.0 && ws <= 12) return { level: 'marginal', note: '' };
+      return { level: 'inactive', note: '' };
     }
-    function judgeSup(ws, wh) {
-      if (ws <= 3 && wh <= 0.5) return 'active';
-      if (ws <= 4 && wh <= 1.0) return 'marginal';
-      return 'inactive';
+    function judgeSup(ws, wh, wt) {
+      if (ws <= 3 && wh <= 0.5) return { level: 'active', note: '穏やか' };
+      if (ws <= 5 && wh <= 0.5 && wt === 'offshore') return { level: 'active', note: '沖に出すぎ注意' };
+      if (ws <= 5 && wh <= 1.0) return { level: 'marginal', note: '' };
+      return { level: 'inactive', note: '' };
     }
     function judgeOverall(ws, wg, wh, acts) {
       if (wg > 10 || wh > 3.0) return 'caution';
@@ -416,20 +454,23 @@
     const ACTIVITY_LABELS = { active: '適', marginal: '微妙', inactive: '不適' };
 
     /* --- Render functions --- */
-    function renderCondition(ws, wg, wh) {
+    function renderCondition(ws, wg, wh, windDir) {
+      const windType = classifyWind(windDir, ws);
+      const windTypeLabel = WIND_TYPE_LABELS[windType];
       const activities = [
-        { name: 'ウィングフォイル', level: judgeWingfoil(ws, wh) },
-        { name: 'サーフィン', level: judgeSurf(ws, wh) },
-        { name: 'SUP', level: judgeSup(ws, wh) },
+        { name: 'ウィングフォイル', ...judgeWingfoil(ws, wh, windType) },
+        { name: 'サーフィン', ...judgeSurf(ws, wh, windType) },
+        { name: 'SUP', ...judgeSup(ws, wh, windType) },
       ];
       const overall = judgeOverall(ws, wg, wh, activities);
       return `<div class="card">
         <div class="condition-section">
           <span class="condition-badge ${overall}">${OVERALL_LABELS[overall]}</span>
           <div class="activity-list">
-            ${activities.map(a =>
-              `<span class="activity-badge ${a.level}">${a.name}: ${ACTIVITY_LABELS[a.level]}</span>`
-            ).join('')}
+            ${activities.map(a => {
+              const note = a.note || windTypeLabel;
+              return `<div class="activity-item"><span class="activity-badge ${a.level}">${a.name}: ${ACTIVITY_LABELS[a.level]}</span><span class="activity-note">${note}</span></div>`;
+            }).join('')}
           </div>
         </div>
       </div>`;
@@ -440,6 +481,8 @@
       const units = data.current_units;
       const weatherText = WEATHER_CODES[c.weather_code] || `コード: ${c.weather_code}`;
       const windDirText = windDirectionToText(c.wind_direction_10m);
+      const windType = classifyWind(c.wind_direction_10m, c.wind_speed_10m);
+      const windTypeLabel = WIND_TYPE_LABELS[windType];
       return `<div class="card">
         <h2>風・気象</h2>
         <div id="weather-table">
@@ -457,7 +500,7 @@
               <div>${weatherText}</div>
               <div>気温 <span class="val">${c.temperature_2m}${units.temperature_2m}</span> / 体感 <span class="val">${c.apparent_temperature}${units.apparent_temperature}</span></div>
               <div>風速 <span class="val">${c.wind_speed_10m} m/s</span>（${msToKt(c.wind_speed_10m)} kt）</div>
-              <div>風向 ${windDirText}（<span class="val">${c.wind_direction_10m}${units.wind_direction_10m}</span>）</div>
+              <div>風向 ${windDirText}（<span class="val">${c.wind_direction_10m}${units.wind_direction_10m}</span>）<span class="wind-type-label">${windTypeLabel}</span></div>
               <div>突風 <span class="val">${c.wind_gusts_10m} m/s</span>（${msToKt(c.wind_gusts_10m)} kt）</div>
             </div>
           </div>
@@ -639,7 +682,7 @@
       if (weatherResult.status === 'fulfilled' && marineResult.status === 'fulfilled') {
         const w = weatherResult.value.current;
         const m = marineResult.value.current;
-        conditionHtml = renderCondition(w.wind_speed_10m, w.wind_gusts_10m, m.wave_height);
+        conditionHtml = renderCondition(w.wind_speed_10m, w.wind_gusts_10m, m.wave_height, w.wind_direction_10m);
       }
 
       const hourlyHtml = renderHourly(

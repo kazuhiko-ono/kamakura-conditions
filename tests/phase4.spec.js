@@ -36,4 +36,21 @@ test.describe('Phase 4: コンディション判定', () => {
     }
   });
 
+  test('風向分類ラベル（オフショア/オンショア/サイドショア/穏やか）が表示される', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
+    const label = page.locator('.wind-type-label');
+    await expect(label).toBeVisible();
+    const text = await label.textContent();
+    const valid = ['オフショア', 'オンショア', 'サイドショア', '穏やか'].some(l => text.includes(l));
+    expect(valid).toBe(true);
+  });
+
+  test('.activity-note 要素が少なくとも1つ存在する', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
+    const count = await page.locator('.activity-note').count();
+    expect(count).toBeGreaterThanOrEqual(1);
+  });
+
 });
