@@ -970,9 +970,10 @@
       }).addTo(windMap);
     }
 
-    function updateWindMarkers(dir) {
+    function updateWindMarkers(dir, speed) {
       if (!windMap) return;
-      const svg = `<svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(${dir + 180}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7))"><polygon points="18,2 10,30 18,22 26,30" fill="#ff2d55" stroke="#fff" stroke-width="2"/></svg>`;
+      const color = windSpeedColor(speed);
+      const svg = `<svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(${dir + 180}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7))"><polygon points="18,2 10,30 18,22 26,30" fill="${color}" stroke="#fff" stroke-width="2"/></svg>`;
       const icon = L.divIcon({
         className: 'wind-map-arrow',
         html: svg,
@@ -1067,7 +1068,7 @@
         windMarkers = [];
         windMap = null;
         initWindMap();
-        updateWindMarkers(w.wind_direction_10m);
+        updateWindMarkers(w.wind_direction_10m, w.wind_speed_10m);
       }
 
       if (errors.length === 0) {
