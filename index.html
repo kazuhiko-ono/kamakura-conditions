@@ -259,6 +259,20 @@
       padding: 4px 0;
       -webkit-overflow-scrolling: touch;
     }
+    .hour-date {
+      display: inline-block;
+      vertical-align: top;
+      padding: 8px 4px;
+      margin-right: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #7ec8e3;
+      white-space: normal;
+      text-align: center;
+      border-left: 2px solid rgba(126,200,227,0.4);
+      min-height: 100%;
+      line-height: 1.3;
+    }
     .hour-item {
       display: inline-block;
       text-align: center;
@@ -562,8 +576,27 @@
       if (!wh && !mh) return '';
       const times = wh ? wh.time : mh.time;
       const nowIdx = findNowIndex(times);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const todayStr = today.toISOString().slice(0,10);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0,10);
+      let prevDate = '';
       let items = '';
       for (let i = 0; i < times.length; i++) {
+        const curDate = times[i].slice(0, 10);
+        if (curDate !== prevDate) {
+          let dateLabel;
+          if (curDate === todayStr) dateLabel = '今日';
+          else if (curDate === tomorrowStr) dateLabel = '明日';
+          else {
+            const dt = new Date(curDate + 'T00:00:00');
+            dateLabel = `${dt.getMonth()+1}/${dt.getDate()}<br>(${DAY_NAMES[dt.getDay()]})`;
+          }
+          items += `<span class="hour-date">${dateLabel}</span>`;
+          prevDate = curDate;
+        }
         const hour = times[i].slice(11, 16);
         const isNow = i === nowIdx;
         const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
