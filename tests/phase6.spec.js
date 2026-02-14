@@ -2,10 +2,10 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Phase 6: 3日間予報', () => {
 
-  test('.daily-row が3つある', async ({ page }) => {
+  test('.daily-row が7つある', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.daily-row').first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('.daily-row')).toHaveCount(3);
+    await expect(page.locator('.daily-row')).toHaveCount(7);
   });
 
   test('1つ目の .daily-row に「今日」が含まれる', async ({ page }) => {
