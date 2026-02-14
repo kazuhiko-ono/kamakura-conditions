@@ -348,6 +348,12 @@
       height: 200px;
     }
 
+    /* --- Tide Chart --- */
+    .tide-chart-container {
+      position: relative;
+      height: 200px;
+    }
+
     /* --- Error --- */
     .error-msg {
       color: #e07070;
@@ -393,6 +399,11 @@
     const LON = 139.535305;
     const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_probability_max&forecast_hours=48&forecast_days=7&wind_speed_unit=ms&timezone=Asia%2FTokyo`;
     const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&hourly=wave_height&forecast_hours=48&timezone=Asia%2FTokyo`;
+
+    function buildTideUrl() {
+      const now = new Date();
+      return `https://tide736.net/api/get_tide.php?pc=14&hc=1&yr=${now.getFullYear()}&mn=${now.getMonth()+1}&dy=${now.getDate()}&rg=week`;
+    }
 
     const WEATHER_CODES = {
       0: '快晴', 1: '晴れ', 2: '一部曇り', 3: '曇り',
@@ -746,6 +757,199 @@
       });
     }
 
+    /* --- Tide Chart --- */
+    let tideChart = null;
+
+    async function fetchTideData() {
+      const res = await fetch(buildTideUrl());
+      if (!res.ok) throw new Error(`Tide API HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    function renderTideChart(tideData) {
+      if (!tideData) return '';
+      return `<div class="card">
+        <h2>潮位予測（塩浜運河）</h2>
+        <div class="tide-chart-container">
+          <canvas id="tideChart"></canvas>
+        </div>
+      </div>`;
+    }
+
+    function initTideChart(tideData, weatherTimes) {
+      if (!tideData || !tideData.tide || !tideData.tide.chart) return;
+      const chartData = tideData.tide.chart;
+      const dates = Object.keys(chartData).sort();
+
+      // Build all tide points and flood/edd markers
+      const tidePoints = [];
+      const floodEdds = [];
+      dates.forEach(dateKey => {
+        const day = chartData[dateKey];
+        if (!day.tide) return;
+        day.tide.forEach(p => {
+          tidePoints.push({ time: dateKey + 'T' + p.time, cm: p.cm });
+        });
+        (day.flood || []).forEach(p => {
+          floodEdds.push({ time: dateKey + 'T' + p.time, cm: p.cm, label: '満' });
+        });
+        (day.edd || []).forEach(p => {
+          floodEdds.push({ time: dateKey + 'T' + p.time, cm: p.cm, label: '干' });
+        });
+      });
+
+      // Resample to hourly aligned with weatherTimes (48 hours)
+      if (!weatherTimes || weatherTimes.length === 0) return;
+      const hourlyTimes = weatherTimes;
+      const hourlyValues = [];
+
+      for (let i = 0; i < hourlyTimes.length; i++) {
+        const target = new Date(hourlyTimes[i]).getTime();
+        let closest = null;
+        let minDiff = Infinity;
+        for (const p of tidePoints) {
+          const t = new Date(p.time).getTime();
+          const diff = Math.abs(t - target);
+          if (diff < minDiff) { minDiff = diff; closest = p; }
+        }
+        hourlyValues.push(closest ? closest.cm : null);
+      }
+
+      // Find flood/edd indices closest to hourly slots
+      const annotations = [];
+      for (const fe of floodEdds) {
+        const feTime = new Date(fe.time).getTime();
+        let bestIdx = -1;
+        let bestDiff = Infinity;
+        for (let i = 0; i < hourlyTimes.length; i++) {
+          const diff = Math.abs(new Date(hourlyTimes[i]).getTime() - feTime);
+          if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+        }
+        if (bestIdx >= 0 && bestDiff < 3600000) {
+          annotations.push({ idx: bestIdx, label: fe.label, cm: fe.cm });
+        }
+      }
+
+      const labels = hourlyTimes.map(t => {
+        const d = new Date(t);
+        return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}時`;
+      });
+
+      const nowIdx = findNowIndex(hourlyTimes);
+
+      const canvas = document.getElementById('tideChart');
+      if (!canvas) return;
+      if (tideChart) { tideChart.destroy(); tideChart = null; }
+
+      tideChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '潮位 (cm)',
+            data: hourlyValues,
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168,85,247,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          layout: { padding: { top: 20 } },
+          scales: {
+            x: {
+              ticks: {
+                color: '#7aa2c4',
+                maxRotation: 0,
+                autoSkip: false,
+                font: { size: 10, family: 'JetBrains Mono' },
+                callback: function(value) {
+                  const hour = new Date(hourlyTimes[value]).getHours();
+                  if (hour % 6 === 0) return labels[value];
+                  return null;
+                }
+              },
+              grid: { color: 'rgba(255,255,255,0.06)' }
+            },
+            y: {
+              ticks: {
+                color: '#7aa2c4',
+                font: { size: 10, family: 'JetBrains Mono' }
+              },
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              title: { display: true, text: 'cm', color: '#7aa2c4', font: { size: 10 } }
+            }
+          }
+        },
+        plugins: [{
+          id: 'tideAnnotations',
+          afterDraw: (chart) => {
+            const ctx = chart.ctx;
+            const area = chart.chartArea;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+
+            // Midnight lines
+            for (let i = 0; i < hourlyTimes.length; i++) {
+              if (new Date(hourlyTimes[i]).getHours() === 0) {
+                const x = xScale.getPixelForValue(i);
+                const d = new Date(hourlyTimes[i]);
+                const label = `${d.getMonth()+1}/${d.getDate()}`;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(126,200,227,0.5)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(x, area.top);
+                ctx.lineTo(x, area.bottom);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(126,200,227,0.8)';
+                ctx.font = '10px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, area.top - 4);
+                ctx.restore();
+              }
+            }
+
+            // Current time line
+            if (nowIdx >= 0 && nowIdx < hourlyTimes.length) {
+              const x = xScale.getPixelForValue(nowIdx);
+              ctx.save();
+              ctx.strokeStyle = '#e74c3c';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.moveTo(x, area.top);
+              ctx.lineTo(x, area.bottom);
+              ctx.stroke();
+              ctx.restore();
+            }
+
+            // Flood/Edd labels
+            for (const a of annotations) {
+              const x = xScale.getPixelForValue(a.idx);
+              const y = yScale.getPixelForValue(a.cm);
+              if (x < area.left || x > area.right) continue;
+              ctx.save();
+              ctx.fillStyle = a.label === '満' ? '#e74c3c' : '#2ecc71';
+              ctx.font = 'bold 11px Noto Sans JP';
+              ctx.textAlign = 'center';
+              ctx.fillText(a.label, x, y - 8);
+              ctx.beginPath();
+              ctx.arc(x, y, 3, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+        }]
+      });
+    }
+
     /* --- Wind Map --- */
     let windMap = null;
     let windMarkers = [];
@@ -804,9 +1008,10 @@
       statusEl.textContent = '読み込み中...';
       resultEl.innerHTML = '<div class="loading-text">読み込み中...</div>';
 
-      const [weatherResult, marineResult] = await Promise.allSettled([
+      const [weatherResult, marineResult, tideResult] = await Promise.allSettled([
         fetchWeatherData(),
-        fetchMarineData()
+        fetchMarineData(),
+        fetchTideData()
       ]);
 
       let conditionHtml = '';
@@ -842,14 +1047,22 @@
         weatherResult.status === 'fulfilled' ? weatherResult.value : null
       );
 
+      const tideChartHtml = renderTideChart(
+        tideResult.status === 'fulfilled' ? tideResult.value : null
+      );
+
       const dailyHtml = renderDaily(
         weatherResult.status === 'fulfilled' ? weatherResult.value : null
       );
 
-      resultEl.innerHTML = conditionHtml + html + hourlyHtml + windChartHtml + dailyHtml;
+      resultEl.innerHTML = conditionHtml + html + hourlyHtml + windChartHtml + tideChartHtml + dailyHtml;
 
       if (weatherResult.status === 'fulfilled') {
         initWindChart(weatherResult.value);
+        const weatherTimes = weatherResult.value.hourly.time;
+        if (tideResult.status === 'fulfilled') {
+          initTideChart(tideResult.value, weatherTimes);
+        }
         const w = weatherResult.value.current;
         windMarkers = [];
         windMap = null;

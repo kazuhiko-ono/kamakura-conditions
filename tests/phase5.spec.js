@@ -46,4 +46,9 @@ test.describe('Phase 5: 時間別予報', () => {
     await expect(page.locator('#windChart')).toBeVisible({ timeout: 15000 });
   });
 
+  test('潮位グラフの canvas 要素（#tideChart）が存在する', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#tideChart')).toBeVisible({ timeout: 15000 });
+  });
+
 });
