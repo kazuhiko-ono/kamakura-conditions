@@ -32,4 +32,13 @@ test.describe('Phase 5: 時間別予報', () => {
     await expect(firstItem.locator('.h-wave')).toBeVisible();
   });
 
+  test('.hour-item 内に風向矢印（.h-wind-arrow）が存在する', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.hourly-scroll')).toBeVisible({ timeout: 15000 });
+    const firstItem = page.locator('.hour-item').first();
+    await expect(firstItem.locator('.h-wind-arrow')).toBeVisible();
+    const style = await firstItem.locator('.h-wind-arrow').getAttribute('style');
+    expect(style).toContain('rotate');
+  });
+
 });

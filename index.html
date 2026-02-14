@@ -292,6 +292,13 @@
       margin-top: 2px;
     }
     .hour-item .h-wave { color: #7ec8e3; }
+    .hour-item .h-wind-arrow {
+      display: inline-block;
+      font-size: 16px;
+      line-height: 1;
+      margin-top: 2px;
+      color: #e74c3c;
+    }
 
     /* --- Daily --- */
     .daily-section { margin-top: 4px; }
@@ -554,12 +561,15 @@
         const isNow = i === nowIdx;
         const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
         const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
+        const windDir = wh ? wh.wind_direction_10m[i] : null;
+        const windArrow = windDir != null ? `<div class="h-wind-arrow" style="transform:rotate(${windDir + 180}deg)">↑</div>` : '';
         const wind = wh ? `<div class="h-wind">${wh.wind_speed_10m[i]} m/s</div>` : '';
         const wave = mh ? `<div class="h-wave">${mh.wave_height[i]}m</div>` : '';
         items += `<div class="hour-item${isNow ? ' now' : ''}">
           <div class="h-time">${hour}</div>
           <div class="h-icon">${icon}</div>
           <div>${temp}</div>
+          ${windArrow}
           ${wind}
           ${wave}
         </div>`;
