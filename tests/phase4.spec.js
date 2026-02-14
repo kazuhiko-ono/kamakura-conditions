@@ -23,7 +23,7 @@ test.describe('Phase 4: コンディション判定', () => {
     await expect(page.locator('.activity-badge')).toHaveCount(3);
   });
 
-  test('各 .activity-badge が active / marginal / inactive のいずれかのクラスを持つ', async ({ page }) => {
+  test('各 .activity-badge が active / marginal / inactive のいずれかのクラスを持ち、◎○△で表示される', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
     const badges = page.locator('.activity-badge');
@@ -33,6 +33,9 @@ test.describe('Phase 4: コンディション判定', () => {
       const classes = await badges.nth(i).getAttribute('class');
       const hasValidClass = ['active', 'marginal', 'inactive'].some(c => classes.includes(c));
       expect(hasValidClass).toBe(true);
+      const text = await badges.nth(i).textContent();
+      const hasSymbol = ['◎', '○', '△'].some(s => text.includes(s));
+      expect(hasSymbol).toBe(true);
     }
   });
 
@@ -44,6 +47,15 @@ test.describe('Phase 4: コンディション判定', () => {
     const text = await label.textContent();
     const valid = ['オフショア', 'オンショア', 'サイドショア', '穏やか'].some(l => text.includes(l));
     expect(valid).toBe(true);
+  });
+
+  test('3種目（ウィングフォイル・ウィンドサーフィン・SUP）が表示される', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
+    const text = await page.locator('.activity-list').textContent();
+    expect(text).toContain('ウィングフォイル');
+    expect(text).toContain('ウィンドサーフィン');
+    expect(text).toContain('SUP');
   });
 
   test('.activity-note 要素が少なくとも1つ存在する', async ({ page }) => {

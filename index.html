@@ -456,18 +456,16 @@
 
     /* --- Condition judgement --- */
     function judgeWingfoil(ws, wh, wt) {
-      if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'sideshore') return { level: 'active', note: 'サイドショア◎' };
+      if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'sideshore') return { level: 'active', note: 'サイドショア最適' };
       if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'offshore') return { level: 'active', note: '沖に流されるリスク注意' };
       if (ws >= 5 && ws <= 12 && wh <= 1.5 && wt === 'onshore') return { level: 'marginal', note: 'オンショア、帰りにくい' };
       if (ws >= 3 && ws <= 15 && wh <= 2.0) return { level: 'marginal', note: '' };
       return { level: 'inactive', note: '' };
     }
-    function judgeSurf(ws, wh, wt) {
-      if (wh >= 0.5 && wh <= 2.5 && ws <= 8 && wt === 'offshore') return { level: 'active', note: 'オフショア、面◎' };
-      if (wh >= 0.5 && wh <= 2.5 && ws <= 5 && (wt === 'sideshore' || wt === 'calm')) return { level: 'active', note: wt === 'calm' ? '無風、面◎' : '' };
-      if (wh >= 0.5 && wh <= 2.5 && ws <= 8 && wt === 'onshore') return { level: 'marginal', note: 'オンショア、面が崩れる' };
-      if (wh >= 0.3 && wh <= 3.0 && ws <= 12) return { level: 'marginal', note: '' };
-      return { level: 'inactive', note: '' };
+    function judgeWindsurf(ws, wh, wt) {
+      if (ws >= 6 && ws <= 12 && wh <= 1.5 && (wt === 'sideshore' || wt === 'offshore')) return { level: 'active', note: wt === 'sideshore' ? 'サイドショア最適' : 'オフショア、沖に注意' };
+      if (ws >= 5 && ws <= 15 && wh <= 2.0 && wt !== 'calm') return { level: 'marginal', note: wt === 'onshore' ? 'オンショア、波に注意' : '' };
+      return { level: 'inactive', note: ws < 5 ? '風が足りない' : '' };
     }
     function judgeSup(ws, wh, wt) {
       if (ws <= 3 && wh <= 0.5) return { level: 'active', note: '穏やか' };
@@ -482,7 +480,7 @@
     }
 
     const OVERALL_LABELS = { good: 'GOOD', ok: 'OK', caution: 'CAUTION' };
-    const ACTIVITY_LABELS = { active: '適', marginal: '微妙', inactive: '不適' };
+    const ACTIVITY_LABELS = { active: '◎', marginal: '○', inactive: '△' };
 
     /* --- Render functions --- */
     function renderCondition(ws, wg, wh, windDir) {
@@ -490,7 +488,7 @@
       const windTypeLabel = WIND_TYPE_LABELS[windType];
       const activities = [
         { name: 'ウィングフォイル', ...judgeWingfoil(ws, wh, windType) },
-        { name: 'サーフィン', ...judgeSurf(ws, wh, windType) },
+        { name: 'ウィンドサーフィン', ...judgeWindsurf(ws, wh, windType) },
         { name: 'SUP', ...judgeSup(ws, wh, windType) },
       ];
       const overall = judgeOverall(ws, wg, wh, activities);
