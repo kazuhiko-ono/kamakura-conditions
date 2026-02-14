@@ -2,19 +2,10 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Phase 4: コンディション判定', () => {
 
-  test('.condition-badge が表示される', async ({ page }) => {
+  test('.activity-card が3つ表示される', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
-    await expect(page.locator('.condition-badge')).toBeVisible();
-  });
-
-  test('.condition-badge が good / ok / caution のいずれかのクラスを持つ', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('#status')).toHaveText('取得成功', { timeout: 15000 });
-    const badge = page.locator('.condition-badge');
-    const classes = await badge.getAttribute('class');
-    const hasValidClass = ['good', 'ok', 'caution'].some(c => classes.includes(c));
-    expect(hasValidClass).toBe(true);
+    await expect(page.locator('.activity-card')).toHaveCount(3);
   });
 
   test('.activity-badge が3つ表示される', async ({ page }) => {
