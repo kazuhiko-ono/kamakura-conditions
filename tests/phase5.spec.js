@@ -41,4 +41,9 @@ test.describe('Phase 5: 時間別予報', () => {
     expect(style).toContain('rotate');
   });
 
+  test('風速グラフの canvas 要素（#windChart）が存在する', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#windChart')).toBeVisible({ timeout: 15000 });
+  });
+
 });

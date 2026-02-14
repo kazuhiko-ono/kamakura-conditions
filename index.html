@@ -342,6 +342,12 @@
       line-height: 1;
     }
 
+    /* --- Wind Chart --- */
+    .wind-chart-container {
+      position: relative;
+      height: 200px;
+    }
+
     /* --- Error --- */
     .error-msg {
       color: #e07070;
@@ -381,11 +387,12 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script>
     const LAT = 35.308652;
     const LON = 139.535305;
-    const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_probability_max&forecast_hours=25&forecast_days=3&wind_speed_unit=ms&timezone=Asia%2FTokyo`;
-    const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&hourly=wave_height&forecast_hours=25&timezone=Asia%2FTokyo`;
+    const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_probability_max&forecast_hours=48&forecast_days=3&wind_speed_unit=ms&timezone=Asia%2FTokyo`;
+    const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&hourly=wave_height&forecast_hours=48&timezone=Asia%2FTokyo`;
 
     const WEATHER_CODES = {
       0: '快晴', 1: '晴れ', 2: '一部曇り', 3: '曇り',
@@ -608,6 +615,99 @@
       </div>`;
     }
 
+    /* --- Wind Chart --- */
+    let windChart = null;
+
+    function renderWindChart(weatherData) {
+      if (!weatherData || !weatherData.hourly) return '';
+      return `<div class="card">
+        <h2>風速予測</h2>
+        <div class="wind-chart-container">
+          <canvas id="windChart"></canvas>
+        </div>
+      </div>`;
+    }
+
+    function initWindChart(weatherData) {
+      if (!weatherData || !weatherData.hourly) return;
+      const hourly = weatherData.hourly;
+      const times = hourly.time;
+      const speeds = hourly.wind_speed_10m;
+      const nowIdx = findNowIndex(times);
+
+      const labels = times.map(t => {
+        const d = new Date(t);
+        return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}時`;
+      });
+
+      const canvas = document.getElementById('windChart');
+      if (!canvas) return;
+      if (windChart) { windChart.destroy(); windChart = null; }
+
+      windChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '風速 (m/s)',
+            data: speeds,
+            borderColor: '#7ec8e3',
+            backgroundColor: 'rgba(126,200,227,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: {
+                color: '#7aa2c4',
+                maxRotation: 0,
+                autoSkip: false,
+                font: { size: 10, family: 'JetBrains Mono' },
+                callback: function(value) {
+                  const hour = new Date(times[value]).getHours();
+                  if (hour % 6 === 0) return labels[value];
+                  return null;
+                }
+              },
+              grid: { color: 'rgba(255,255,255,0.06)' }
+            },
+            y: {
+              ticks: {
+                color: '#7aa2c4',
+                font: { size: 10, family: 'JetBrains Mono' }
+              },
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              title: { display: true, text: 'm/s', color: '#7aa2c4', font: { size: 10 } }
+            }
+          }
+        },
+        plugins: [{
+          id: 'nowLine',
+          afterDraw: (chart) => {
+            if (nowIdx < 0 || nowIdx >= times.length) return;
+            const x = chart.scales.x.getPixelForValue(nowIdx);
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, chart.chartArea.top);
+            ctx.lineTo(x, chart.chartArea.bottom);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }]
+      });
+    }
+
     /* --- Wind Map --- */
     let windMap = null;
     let windMarkers = [];
@@ -700,13 +800,18 @@
         marineResult.status === 'fulfilled' ? marineResult.value : null
       );
 
+      const windChartHtml = renderWindChart(
+        weatherResult.status === 'fulfilled' ? weatherResult.value : null
+      );
+
       const dailyHtml = renderDaily(
         weatherResult.status === 'fulfilled' ? weatherResult.value : null
       );
 
-      resultEl.innerHTML = conditionHtml + html + hourlyHtml + dailyHtml;
+      resultEl.innerHTML = conditionHtml + html + hourlyHtml + windChartHtml + dailyHtml;
 
       if (weatherResult.status === 'fulfilled') {
+        initWindChart(weatherResult.value);
         const w = weatherResult.value.current;
         windMarkers = [];
         windMap = null;
