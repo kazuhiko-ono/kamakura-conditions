@@ -199,7 +199,7 @@
       width: 4px; height: 36px;
       margin-left: -2px;
       margin-top: -36px;
-      background: #e74c3c;
+      background: var(--arrow-color, #e74c3c);
       transform-origin: bottom center;
       transition: transform 0.6s ease;
     }
@@ -209,7 +209,7 @@
       top: -6px; left: -5px;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
-      border-bottom: 10px solid #e74c3c;
+      border-bottom: 10px solid var(--arrow-color, #e74c3c);
     }
     .wind-info {
       font-size: 14px;
@@ -424,6 +424,12 @@
 
     function msToKt(ms) { return (ms * 1.944).toFixed(1); }
 
+    function windSpeedColor(speed) {
+      if (speed >= 10) return '#e67e22';
+      if (speed >= 5) return '#2ecc71';
+      return '#7ec8e3';
+    }
+
     /* --- Wind direction classification --- */
     const COAST_BEARING = 180;
     const WIND_TYPE_LABELS = { offshore: 'オフショア', onshore: 'オンショア', sideshore: 'サイドショア', calm: '穏やか' };
@@ -508,12 +514,12 @@
                 <span class="dir-e">E</span>
                 <span class="dir-w">W</span>
               </div>
-              <div class="wind-arrow" style="transform: rotate(${c.wind_direction_10m + 180}deg)"></div>
+              <div class="wind-arrow" style="transform: rotate(${c.wind_direction_10m + 180}deg); --arrow-color: ${windSpeedColor(c.wind_speed_10m)}"></div>
             </div>
             <div class="wind-info">
               <div>${weatherText}</div>
               <div>気温 <span class="val">${c.temperature_2m}${units.temperature_2m}</span> / 体感 <span class="val">${c.apparent_temperature}${units.apparent_temperature}</span></div>
-              <div>風速 <span class="val">${c.wind_speed_10m} m/s</span>（${msToKt(c.wind_speed_10m)} kt）</div>
+              <div>風速 <span class="val" style="color:${windSpeedColor(c.wind_speed_10m)}">${c.wind_speed_10m} m/s</span>（${msToKt(c.wind_speed_10m)} kt）</div>
               <div>風向 ${windDirText}（<span class="val">${c.wind_direction_10m}${units.wind_direction_10m}</span>）<span class="wind-type-label">${windTypeLabel}</span></div>
               <div>突風 <span class="val">${c.wind_gusts_10m} m/s</span>（${msToKt(c.wind_gusts_10m)} kt）</div>
             </div>
@@ -569,8 +575,9 @@
         const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
         const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
         const windDir = wh ? wh.wind_direction_10m[i] : null;
-        const windArrow = windDir != null ? `<div class="h-wind-arrow" style="transform:rotate(${windDir + 180}deg)">↑</div>` : '';
-        const wind = wh ? `<div class="h-wind">${wh.wind_speed_10m[i]} m/s</div>` : '';
+        const wsColor = wh ? windSpeedColor(wh.wind_speed_10m[i]) : '';
+        const windArrow = windDir != null ? `<div class="h-wind-arrow" style="transform:rotate(${windDir + 180}deg);color:${wsColor}">↑</div>` : '';
+        const wind = wh ? `<div class="h-wind" style="color:${wsColor}">${wh.wind_speed_10m[i]} m/s</div>` : '';
         const wave = mh ? `<div class="h-wave">${mh.wave_height[i]}m</div>` : '';
         items += `<div class="hour-item${isNow ? ' now' : ''}">
           <div class="h-time">${hour}</div>
@@ -605,7 +612,7 @@
           <span class="d-date">${dateLabel}</span>
           <span class="d-icon">${icon}</span>
           <span class="d-temp">${d.temperature_2m_max[i]}\u00B0 / ${d.temperature_2m_min[i]}\u00B0</span>
-          <span class="d-wind">${d.wind_speed_10m_max[i]} m/s</span>
+          <span class="d-wind" style="color:${windSpeedColor(d.wind_speed_10m_max[i])}">${d.wind_speed_10m_max[i]} m/s</span>
           <span class="d-rain">${rain != null ? rain + '%' : '-'}</span>
         </div>`;
       }
@@ -657,6 +664,9 @@
             tension: 0.3,
             pointRadius: 0,
             borderWidth: 2,
+            segment: {
+              borderColor: ctx => windSpeedColor(ctx.p1.parsed.y),
+            },
           }]
         },
         options: {
