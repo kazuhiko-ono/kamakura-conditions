@@ -402,7 +402,7 @@
 
     function buildTideUrl() {
       const now = new Date();
-      return `https://tide736.net/api/get_tide.php?pc=14&hc=1&yr=${now.getFullYear()}&mn=${now.getMonth()+1}&dy=${now.getDate()}&rg=week`;
+      return `https://tide736.net/api/get_tide.php?pc=14&hc=19&yr=${now.getFullYear()}&mn=${now.getMonth()+1}&dy=${now.getDate()}&rg=week`;
     }
 
     const WEATHER_CODES = {
@@ -769,7 +769,7 @@
     function renderTideChart(tideData) {
       if (!tideData) return '';
       return `<div class="card">
-        <h2>潮位予測（塩浜運河）</h2>
+        <h2>潮位予測（江ノ島）</h2>
         <div class="tide-chart-container">
           <canvas id="tideChart"></canvas>
         </div>
