@@ -663,6 +663,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
+          layout: { padding: { top: 16 } },
           scales: {
             x: {
               ticks: {
@@ -691,18 +692,45 @@
         plugins: [{
           id: 'nowLine',
           afterDraw: (chart) => {
-            if (nowIdx < 0 || nowIdx >= times.length) return;
-            const x = chart.scales.x.getPixelForValue(nowIdx);
             const ctx = chart.ctx;
-            ctx.save();
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
-            ctx.moveTo(x, chart.chartArea.top);
-            ctx.lineTo(x, chart.chartArea.bottom);
-            ctx.stroke();
-            ctx.restore();
+            const area = chart.chartArea;
+            const xScale = chart.scales.x;
+
+            // Midnight lines with date labels
+            for (let i = 0; i < times.length; i++) {
+              if (new Date(times[i]).getHours() === 0) {
+                const x = xScale.getPixelForValue(i);
+                const d = new Date(times[i]);
+                const label = `${d.getMonth()+1}/${d.getDate()}`;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(126,200,227,0.5)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(x, area.top);
+                ctx.lineTo(x, area.bottom);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(126,200,227,0.8)';
+                ctx.font = '10px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, area.top - 4);
+                ctx.restore();
+              }
+            }
+
+            // Current time line
+            if (nowIdx >= 0 && nowIdx < times.length) {
+              const x = xScale.getPixelForValue(nowIdx);
+              ctx.save();
+              ctx.strokeStyle = '#e74c3c';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.moveTo(x, area.top);
+              ctx.lineTo(x, area.bottom);
+              ctx.stroke();
+              ctx.restore();
+            }
           }
         }]
       });
