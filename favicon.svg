@@ -4,26 +4,21 @@
       <stop offset="0%" stop-color="#0f2540"/>
       <stop offset="100%" stop-color="#0b1929"/>
     </linearGradient>
-    <linearGradient id="wave-grad" x1="0" y1="0" x2="1" y2="0.5">
+    <linearGradient id="wave-fill" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#00d4ff"/>
-      <stop offset="50%" stop-color="#0099dd"/>
-      <stop offset="100%" stop-color="#0066bb"/>
+      <stop offset="100%" stop-color="#0066cc"/>
     </linearGradient>
-    <linearGradient id="wind-grad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#0099dd" stop-opacity="0.4"/>
+    <linearGradient id="wind-line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#0088cc" stop-opacity="0.5"/>
     </linearGradient>
   </defs>
   <!-- Background -->
   <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- Wind streaks -->
-  <line x1="100" y1="155" x2="340" y2="155" stroke="url(#wind-grad)" stroke-width="18" stroke-linecap="round"/>
-  <line x1="140" y1="200" x2="390" y2="200" stroke="url(#wind-grad)" stroke-width="14" stroke-linecap="round"/>
-  <line x1="170" y1="240" x2="360" y2="240" stroke="url(#wind-grad)" stroke-width="10" stroke-linecap="round"/>
-  <!-- Wave -->
-  <path d="M50 330 Q130 260 200 330 Q270 400 350 330 Q410 280 470 330"
-        stroke="url(#wave-grad)" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Small secondary wave -->
-  <path d="M80 390 Q140 355 200 390 Q260 425 330 390 Q380 365 440 390"
-        stroke="#0088cc" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.4"/>
+  <!-- Wind lines (bold) -->
+  <line x1="80" y1="130" x2="350" y2="130" stroke="url(#wind-line)" stroke-width="32" stroke-linecap="round"/>
+  <line x1="130" y1="195" x2="400" y2="195" stroke="url(#wind-line)" stroke-width="28" stroke-linecap="round"/>
+  <!-- Wave (filled, large) -->
+  <path d="M30 310 Q140 210 256 310 Q372 410 482 310 L482 460 Q372 380 256 460 Q140 380 30 460 Z"
+        fill="url(#wave-fill)" opacity="0.9"/>
 </svg>
