@@ -583,6 +583,13 @@
       if (!wh && !mh) return '';
       const times = wh ? wh.time : mh.time;
       const nowIdx = findNowIndex(times);
+      let displayNowIdx = nowIdx;
+      if (nowIdx < times.length) {
+        const nowHour = new Date(times[nowIdx]).getHours();
+        if (nowHour % 2 !== 0) {
+          displayNowIdx = nowIdx > 0 ? nowIdx - 1 : nowIdx + 1;
+        }
+      }
       const today = new Date();
       today.setHours(0,0,0,0);
       const todayStr = today.toISOString().slice(0,10);
@@ -592,6 +599,8 @@
       let prevDate = '';
       let items = '';
       for (let i = 0; i < times.length; i++) {
+        const hourNum = parseInt(times[i].slice(11, 13));
+        if (hourNum % 2 !== 0) continue;
         const curDate = times[i].slice(0, 10);
         if (curDate !== prevDate) {
           let dateLabel;
@@ -605,7 +614,7 @@
           prevDate = curDate;
         }
         const hour = times[i].slice(11, 16);
-        const isNow = i === nowIdx;
+        const isNow = i === displayNowIdx;
         const icon = wh ? (WEATHER_ICONS[wh.weather_code[i]] || '') : '';
         const temp = wh ? `${wh.temperature_2m[i]}\u00B0C` : '';
         const windDir = wh ? wh.wind_direction_10m[i] : null;
@@ -717,7 +726,7 @@
                 font: { size: 10, family: 'JetBrains Mono' },
                 callback: function(value) {
                   const hour = new Date(times[value]).getHours();
-                  if (hour % 6 === 0) return labels[value];
+                  if (hour % 2 === 0) return `${String(hour).padStart(2,'0')}時`;
                   return null;
                 }
               },
@@ -893,7 +902,7 @@
                 font: { size: 10, family: 'JetBrains Mono' },
                 callback: function(value) {
                   const hour = new Date(hourlyTimes[value]).getHours();
-                  if (hour % 6 === 0) return labels[value];
+                  if (hour % 2 === 0) return `${String(hour).padStart(2,'0')}時`;
                   return null;
                 }
               },
