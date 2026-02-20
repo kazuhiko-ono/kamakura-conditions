@@ -1013,16 +1013,16 @@
     let windMap = null;
     let windMarkers = [];
     const ARROW_POSITIONS = [
-      [35.3117, 139.5323], [35.3117, 139.5353], [35.3117, 139.5383],
-      [35.3087, 139.5323], [35.3087, 139.5353], [35.3087, 139.5383],
-      [35.3057, 139.5323], [35.3057, 139.5353], [35.3057, 139.5383],
+      [35.320, 139.523], [35.320, 139.535], [35.320, 139.547],
+      [35.308, 139.523], [35.308, 139.535], [35.308, 139.547],
+      [35.296, 139.523], [35.296, 139.535], [35.296, 139.547],
     ];
 
     function initWindMap() {
       if (windMap) return;
       const el = document.getElementById('wind-map');
       if (!el) return;
-      windMap = L.map('wind-map', { zoomControl: false, attributionControl: true }).setView([LAT, LON], 15);
+      windMap = L.map('wind-map', { zoomControl: false, attributionControl: true }).setView([LAT, LON], 13);
       L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
